@@ -54,7 +54,7 @@ async def get_db_pool() -> aiomysql.Pool:
     return db_pool
 
 @asynccontextmanager
-async def app_lifespan() -> AsyncIterator[AppContext]:
+async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     logger.info("Initializing MCP lifecycle...")
     db = await get_db_pool()
     logger.info("Database pool ready, MCP server initialized and ready to receive requests.")
@@ -66,7 +66,12 @@ async def app_lifespan() -> AsyncIterator[AppContext]:
         await db.wait_closed()
 
 # Initialize the MCP server
-mcp = FastMCP("MySQLMCP", lifespan=app_lifespan, port=3002)
+mcp = FastMCP(
+    "MySQLMCP", 
+    lifespan=app_lifespan,
+    host="0.0.0.0", 
+    port=3002, 
+)
 
 @mcp.tool()
 async def health_check(ctx: Context) -> dict:
@@ -185,5 +190,5 @@ async def show_explain_query(ctx: Context, query: str) -> Union[dict, list[dict]
 if __name__ == "__main__":
     logger.info("Starting MCP server...")
     mcp.run(
-      transport='sse'
+        transport='sse'
     )

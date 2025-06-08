@@ -26,4 +26,4 @@ COPY . .
 
 EXPOSE 3002
 
-CMD ["python", "main-mysql.py"]
+CMD ["python", "main.py"]
