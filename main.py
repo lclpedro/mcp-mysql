@@ -61,9 +61,11 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     try:
         yield AppContext(db=db)
     finally:
-        logger.info("Closing MCP lifecycle. Closing database connection pool...")
-        db.close()
-        await db.wait_closed()
+        logger.info("Shutting down MCP server and database pool...")
+        if db: # 'db' is the pool instance obtained from get_db_pool at startup
+            db.close()
+            await db.wait_closed()
+        logger.info("Database pool closed.")
 
 # Initialize the MCP server
 mcp = FastMCP(
@@ -86,9 +88,8 @@ async def health_check(ctx: Context) -> dict:
         async with db.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute("SELECT 1")
-                await cur.fetchone()
-
-        return {"status": "healthy", "database": "connected"}
+                test = await cur.fetchone()
+        return {"status": "healthy", "database": "connected", "result": test[0]}
     except Exception as e:
         logger.error(f"Health check error: {e}")
         return {"status": "error", "error": "Service unavailable"}
@@ -99,14 +100,14 @@ async def list_tables(ctx: Context) -> list[dict]:
     List all tables in the database.
 
     Returns:
-        A list of dictionaries with the table names.
+        A list of tables with the table names.
     """
     db = ctx.request_context.lifespan_context.db
     async with db.acquire() as conn:
-        async with conn.cursor(aiomysql.DictCursor) as cur:
+        async with conn.cursor() as cur:
             await cur.execute("SHOW TABLES")
             result = await cur.fetchall()
-            return [{"tablename": row[f"Tables_in_{DATABASE_NAME}"]} for row in result]
+    return [{"tablename": row[0]} for row in result]
 
 @mcp.tool()
 async def get_table_schema(ctx: Context, table_name: str) -> list[dict]:
@@ -146,7 +147,7 @@ async def get_table_data(ctx: Context, query: str) -> Union[dict, list[dict]]:
             logger.info(f"Executing query: {query}")
             await cur.execute(query)
             result = await cur.fetchall()
-            return [dict(row) for row in result]
+            return result
 
 @mcp.tool()
 async def show_indexes_table(ctx: Context, table_name: str) -> list[dict]:
@@ -164,7 +165,25 @@ async def show_indexes_table(ctx: Context, table_name: str) -> list[dict]:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(f"SHOW INDEX FROM {table_name}")
             result = await cur.fetchall()
-            return [{"index_name": row["Key_name"], "column_name": row["Column_name"]} for row in result]
+            indexes_map = {}
+            for row in result:
+                index_name = row["Key_name"]
+                column_name = row["Column_name"]
+                # Seq_in_index is 1-based index of column in index
+                seq_in_index = row["Seq_in_index"]
+
+                if index_name not in indexes_map:
+                    indexes_map[index_name] = []
+                indexes_map[index_name].append((seq_in_index, column_name))
+            
+            output_list = []
+            for index_name, cols_with_seq in indexes_map.items():
+                # Sort columns by sequence number (the first element of the tuple)
+                cols_with_seq.sort(key=lambda x: x[0])
+                # Extract just the column names in the correct order
+                sorted_columns = [col_name for seq, col_name in cols_with_seq]
+                output_list.append({"index_name": index_name, "columns": sorted_columns})
+            return output_list
 
 @mcp.tool()
 async def show_explain_query(ctx: Context, query: str) -> Union[dict, list[dict]]:
@@ -179,7 +198,7 @@ async def show_explain_query(ctx: Context, query: str) -> Union[dict, list[dict]
     """
     db = ctx.request_context.lifespan_context.db
     if not query.strip().upper().startswith("SELECT"):
-        return {"error": "You can only perform SELECT queries"}
+        return {"error": "You can only perform SELECT queries. Start with SELECT."}
 
     async with db.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
