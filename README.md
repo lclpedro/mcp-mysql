@@ -50,6 +50,17 @@ volumes:
 ```
 4. Load MCPs in IDE.
 
+### Others Executions
+
+If your running only MCP server, you can run it with:
+```bash
+> git clone https://github.com/lclpedro/mcp-mysql.git
+> cd mcp-mysql
+> cp .env.example .env
+> poetry install
+> poetry run python main.py
+```
+
 ### Tools available:
 - health_check
 - list_tables
