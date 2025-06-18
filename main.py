@@ -128,9 +128,9 @@ async def get_table_schema(ctx: Context, table_name: str) -> list[dict]:
             return [{"column_name": row["Field"], "data_type": row["Type"]} for row in result]
 
 @mcp.tool()
-async def get_table_data(ctx: Context, query: str) -> Union[dict, list[dict]]:
+async def execute_query(ctx: Context, query: str) -> Union[dict, list[dict]]:
     """
-    Get the data from a table.
+    Execute a General SQL query.
 
     Args:
         query: The SQL query to execute.
