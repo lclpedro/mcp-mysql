@@ -1,5 +1,5 @@
 # MCPs
-## MySQL MCP
+## MySQL Managing MCP
 
 How to use this MCP:
 1. Import imagem in the docker-compose with how to docker-compose.yml
@@ -42,9 +42,10 @@ volumes:
 3. Configure MCP Server in this IDE:
 ```json
 {
-    "mcpServer": {
-        "url": "http://localhost:3002",
-        "transport": "sse"
+    "mcpServers": {
+        "mysqlManaging":{
+            "serverUrl": "http://localhost:3002/sse"
+        }
     }
 }
 ```
@@ -65,7 +66,7 @@ If your running only MCP server, you can run it with:
 - health_check
 - list_tables
 - get_table_schema
-- get_table_data
+- execute_query
 - show_indexes_table
 - show_explain_query
 
