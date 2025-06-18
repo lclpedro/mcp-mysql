@@ -42,9 +42,10 @@ volumes:
 3. Configure MCP Server in this IDE:
 ```json
 {
-    "mcpServer": {
-        "url": "http://localhost:3002",
-        "transport": "sse"
+    "mcpServers": {
+        "mysqlManaging":{
+            "serverUrl": "http://localhost:3002/sse"
+        }
     }
 }
 ```
