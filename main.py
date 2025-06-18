@@ -139,9 +139,6 @@ async def get_table_data(ctx: Context, query: str) -> Union[dict, list[dict]]:
         A dictionary or list of dictionaries with the query results.
     """
     db = ctx.request_context.lifespan_context.db
-    if not query.strip().upper().startswith("SELECT"):
-        return {"error": "You can only perform SELECT queries"}
-
     async with db.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             logger.info(f"Executing query: {query}")
@@ -197,9 +194,6 @@ async def show_explain_query(ctx: Context, query: str) -> Union[dict, list[dict]
         A dictionary or list of dictionaries with the explain results.
     """
     db = ctx.request_context.lifespan_context.db
-    if not query.strip().upper().startswith("SELECT"):
-        return {"error": "You can only perform SELECT queries. Start with SELECT."}
-
     async with db.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(f"EXPLAIN {query}")
