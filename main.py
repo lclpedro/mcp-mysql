@@ -55,6 +55,7 @@ async def get_db_pool() -> aiomysql.Pool:
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
+    global db_pool
     logger.info("Initializing MCP lifecycle...")
     db = await get_db_pool()
     logger.info("Database pool ready, MCP server initialized and ready to receive requests.")
@@ -65,6 +66,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         if db: # 'db' is the pool instance obtained from get_db_pool at startup
             db.close()
             await db.wait_closed()
+            db_pool = None
         logger.info("Database pool closed.")
 
 # Initialize the MCP server
